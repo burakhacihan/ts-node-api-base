@@ -1,0 +1,36 @@
+# ============================================
+# Development Dockerfile
+# ============================================
+
+FROM node:20-alpine
+
+# Install development dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init curl git && \
+    rm -rf /var/cache/apk/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install all dependencies (including dev)
+RUN npm install && \
+    npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start development server with hot reload
+CMD ["npm", "run", "dev"]
